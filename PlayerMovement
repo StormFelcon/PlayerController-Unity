@@ -1,0 +1,75 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(CharacterController))] //requires the component charactercontroller else it will return an error.
+
+public class PlayerMovement : MonoBehaviour
+{
+    public float walkingSpeed = 7.5f; //speed when holding "w"
+    public float runningSpeed = 11.5f; //speed when sprinting with "left shift"
+    public float jumpSpeed = 8.0f; //how fast & far your character jumps when pressing space
+    public float gravity = 20.0f; //how fast your character goes back to the ground from slopes & jumping
+    public Camera playerCamera; //reference the camera for movement
+    public float lookSpeed = 2.0f; //how fast your character can turn
+    public float lookXLimit = 45.0f; //limit the angle from the camera
+
+    CharacterController characterController; //reference the character controller
+    public Vector3 moveDirection = Vector3.zero; //move direction
+    float rotationX = 0;
+
+    [HideInInspector]
+    public bool canMove = true; //if character can move
+
+    void Start()
+    {
+        characterController = GetComponent<CharacterController>(); //get character controller from player
+
+        Cursor.lockState = CursorLockMode.Locked; //lock cursor in the middle of screen
+        Cursor.visible = false; //hide cursor
+    }
+
+    void Update()
+    {
+        Vector3 forward = transform.TransformDirection(Vector3.forward); 
+        Vector3 right = transform.TransformDirection(Vector3.right);
+        bool isRunning = Input.GetKey(KeyCode.LeftShift); //check if character is running
+        float curSpeedX = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Vertical") : 0; //vertical input
+        float curSpeedY = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Horizontal") : 0; //horizontal input
+        float movementDirectionY = moveDirection.y;
+        moveDirection = (forward * curSpeedX) + (right * curSpeedY); //convert input to direction
+
+        if (Input.GetButton("Jump") && canMove && characterController.isGrounded) //jumping & checking if character is touching the floor
+        {
+            moveDirection.y = jumpSpeed; //apply speed on y axis
+        }
+        else
+        {
+            moveDirection.y = movementDirectionY;
+        }
+
+        if (!characterController.isGrounded)//apply gravity
+        {
+            moveDirection.y -= gravity * Time.deltaTime;
+        }
+
+        characterController.Move(moveDirection * Time.deltaTime); //movement
+
+        if (canMove) //rotation
+        {
+            rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
+            rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
+            playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+        }
+
+        if(Input.GetButton("Crouch")){ //check if player is holding down left control key
+            characterController.height = 1f;
+        }
+        else{ //else reset to 2f height
+            characterController.height = 2f;
+        }
+
+        
+    }
+}
